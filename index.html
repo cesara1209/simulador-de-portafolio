@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Portafolio Pro - Conexión Sheets</title>
+    <!-- Tailwind CSS para el diseño estilizado -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js para los gráficos dinámicos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons para la interfaz -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- PapaParse para procesar el CSV de Google Sheets de forma ultrarápida -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        /* Desplazamiento suave y personalización de barras */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090d16;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+        /* Transiciones para elementos interactivos */
+        .transition-all-300 {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body class="min-h-full flex flex-col font-sans bg-slate-950 text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-200">
+
+    <!-- Navbar / Cabecera -->
+    <header class="border-b border-slate-800 bg-slate-900/40 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-gradient-to-tr from-emerald-500 to-teal-400 rounded-xl text-slate-950 shadow-lg shadow-emerald-500/10">
+                    <i data-lucide="line-chart" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
+                        Simulador de Portafolio <span class="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20 font-mono">v2.5 PRO</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Análisis de BVL, 7 Magníficas y ETFs vía Google Sheets</p>
+                </div>
+            </div>
+            
+            <!-- Tabs de navegación principal -->
+            <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 w-full sm:w-auto">
+                <button onclick="switchTab('simulador')" id="tab-simulador" class="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-sm font-semibold transition bg-emerald-500 text-slate-950 shadow-sm">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                    <span>Simulador</span>
+                </button>
+                <button onclick="switchTab('sheets')" id="tab-sheets" class="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-sm font-semibold transition text-slate-400 hover:text-white">
+                    <i data-lucide="database" class="w-4 h-4"></i>
+                    <span>Conectar Sheets</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Notificación / Toast flotante para feedback -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-2xl flex items-center space-x-3 max-w-sm">
+        <div id="toast-icon-wrapper" class="p-1.5 rounded-lg">
+            <i id="toast-icon" class="w-5 h-5"></i>
+        </div>
+        <p id="toast-msg" class="text-xs font-medium text-slate-200"></p>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6">
+
+        <!-- TAB 1: SIMULADOR -->
+        <div id="section-simulador" class="space-y-6">
+            
+            <!-- Resumen de estado de conexión de base de datos -->
+            <div id="db-status-bar" class="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <div class="flex items-center space-x-2">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                        <span id="status-dot" class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                    </span>
+                    <span id="status-text" class="text-blue-300 font-medium">Usando base de datos predefinida de la BVL, 7 Magníficas y ETFs</span>
+                </div>
+                <button onclick="switchTab('sheets')" class="text-blue-400 hover:text-blue-300 font-semibold flex items-center space-x-1">
+                    <span>Cambiar a Google Sheets</span>
+                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+
+            <!-- Panel de Entrada de Capital -->
+            <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Moneda del Portafolio</label>
+                        <div class="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                            <button id="btnSoles" onclick="setMoneda('S/.')" class="py-2 px-3 rounded-lg text-sm font-medium transition-all bg-emerald-500 text-slate-950 shadow-sm font-bold">
+                                Soles (S/.)
+                            </button>
+                            <button id="btnDolares" onclick="setMoneda('$')" class="py-2 px-3 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white">
+                                Dólares ($)
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="capitalInput" class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Capital de Inversión</label>
+                        <div class="relative rounded-xl shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-slate-500 font-bold" id="currencySymbol">S/.</span>
+                            </div>
+                            <input type="number" id="capitalInput" min="100" value="10000" oninput="actualizarCalculos()"
+                                class="block w-full pl-12 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-white font-bold text-lg">
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="autoBalancear()" class="flex-1 py-2.5 px-4 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold rounded-xl text-sm transition flex items-center justify-center space-x-2 border border-slate-700">
+                            <i data-lucide="scale" class="w-4 h-4"></i>
+                            <span>Auto-balancear</span>
+                        </button>
+                        <button onclick="vaciarPortafolio()" class="py-2.5 px-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold rounded-xl text-sm transition border border-red-500/20 active:scale-95" title="Vaciar Portafolio">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Layout Principal de Construcción -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                
+                <!-- Columna Izquierda: Buscador y Lista de Activos para agregar -->
+                <div class="lg:col-span-7 space-y-6">
+                    
+                    <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+                                <i data-lucide="plus-circle" class="text-emerald-400 w-5 h-5"></i>
+                                <span>Agregar Activos a tu Portafolio</span>
+                            </h3>
+                        </div>
+
+                        <!-- Filtros por Categoría -->
+                        <div class="grid grid-cols-4 gap-2 mb-4 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                            <button onclick="filtrarActivos('TODOS')" id="filter-TODOS" class="py-1.5 px-2 rounded-lg font-semibold transition bg-slate-800 text-white">Todos</button>
+                            <button onclick="filtrarActivos('BVL')" id="filter-BVL" class="py-1.5 px-2 rounded-lg font-semibold transition text-slate-400 hover:text-white">BVL</button>
+                            <button onclick="filtrarActivos('7 MAGNIFICAS')" id="filter-7-MAGNIFICAS" class="py-1.5 px-2 rounded-lg font-semibold transition text-slate-400 hover:text-white">Magníficas</button>
+                            <button onclick="filtrarActivos('ETF')" id="filter-ETF" class="py-1.5 px-2 rounded-lg font-semibold transition text-slate-400 hover:text-white">ETFs</button>
+                        </div>
+
+                        <!-- Grid de Selección de Activos -->
+                        <div class="max-h-72 overflow-y-auto pr-2 space-y-2" id="catalogoActivos">
+                            <!-- Se genera dinámicamente -->
+                        </div>
+                    </div>
+
+                    <!-- Miembros agregados al Portafolio actual -->
+                    <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+                                <i data-lucide="sliders" class="text-emerald-400 w-5 h-5"></i>
+                                <span>Configuración de Porcentajes</span>
+                            </h3>
+                            <span id="activeCount" class="text-xs bg-slate-850 px-2.5 py-1 rounded-lg border border-slate-800 font-semibold text-slate-400">0 activos elegidos</span>
+                        </div>
+
+                        <!-- Lista de Sliders de activos seleccionados -->
+                        <div id="slidersPortafolio" class="space-y-4">
+                            <!-- Dinámico -->
+                            <div class="text-center py-8 text-slate-500 text-sm italic" id="emptySlidersPlaceholder">
+                                <i data-lucide="folder-open" class="w-8 h-8 mx-auto mb-2 text-slate-600 block"></i>
+                                No has agregado activos. Elige algunos en el catálogo superior.
+                            </div>
+                        </div>
+
+                        <!-- Barra de verificación de suma (100%) -->
+                        <div class="mt-6 pt-4 border-t border-slate-800/60">
+                            <div class="flex justify-between text-sm font-semibold mb-2">
+                                <span class="text-slate-400">Total Distribuido:</span>
+                                <span id="totalPctLabel" class="text-red-400">0%</span>
+                            </div>
+                            <div class="w-full bg-slate-950 rounded-full h-3 overflow-hidden border border-slate-850">
+                                <div id="totalPctBar" class="bg-red-500 h-full transition-all duration-300" style="width: 0%;"></div>
+                            </div>
+                            <p id="alertMessage" class="text-xs text-yellow-500 mt-2 hidden flex items-center space-x-2">
+                                <i data-lucide="alert-triangle" class="w-4 h-4 flex-shrink-0"></i>
+                                <span>La suma total de tus activos debe ser exactamente 100%. Haz clic en <strong>Auto-balancear</strong> para corregir.</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha: Métricas, Gráficos y Análisis -->
+                <div class="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
+                    
+                    <!-- Tarjeta de Análisis Visual -->
+                    <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm space-y-4">
+                        <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+                            <i data-lucide="pie-chart" class="w-5 h-5 text-emerald-400"></i>
+                            <span>Distribución Visual</span>
+                        </h3>
+
+                        <!-- Chart JS Canvas -->
+                        <div class="relative h-56 w-full flex items-center justify-center p-2 bg-slate-950/40 rounded-xl border border-slate-800/50">
+                            <canvas id="portfolioChart"></canvas>
+                        </div>
+
+                        <!-- Métricas del Portafolio Analizado -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-slate-950 p-4 rounded-xl border border-slate-850">
+                                <span class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold block mb-1">Crecimiento Promedio</span>
+                                <span class="text-base font-bold text-emerald-400" id="resCrecimiento">0.00% / año</span>
+                            </div>
+                            <div class="bg-slate-950 p-4 rounded-xl border border-slate-850">
+                                <span class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold block mb-1">Retorno Dividendos</span>
+                                <span class="text-base font-bold text-teal-400" id="resDividendo">0.00% / año</span>
+                            </div>
+                        </div>
+
+                        <!-- Impacto Financiero en Soles/Dólares -->
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-850 space-y-2">
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-slate-400">Inversión Inicial:</span>
+                                <span class="font-bold text-white" id="montoInversionLabel">0.00</span>
+                            </div>
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-slate-400">Dividendos Anuales estimados:</span>
+                                <span class="font-bold text-teal-400" id="montoDividendosAnual">0.00</span>
+                            </div>
+                            <div class="flex justify-between items-center text-xs pt-2 border-t border-slate-900">
+                                <div class="flex flex-col">
+                                    <span class="text-slate-400">Proyección compuesta:</span>
+                                    <div class="flex items-center space-x-2 mt-1">
+                                        <input type="range" id="yearsProjection" min="1" max="25" value="5" oninput="actualizarCalculos()" class="w-24 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+                                        <span class="text-[10px] text-slate-500 font-semibold" id="yearsLabel">5 años</span>
+                                    </div>
+                                </div>
+                                <span class="font-extrabold text-emerald-400 text-sm" id="valorProyectado5Anios">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabla Resumen Dinámica de Activos en Cartera -->
+                    <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-sm">
+                        <h4 class="text-sm font-bold text-white mb-3">Resumen de Activos en Cartera</h4>
+                        <div class="space-y-2 text-xs" id="tablaActivosActivos">
+                            <!-- Dinámico -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WhatsApp Community CTA Banner -->
+            <div class="bg-gradient-to-r from-emerald-900/40 via-teal-900/30 to-slate-950/40 border border-emerald-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+                <div class="absolute -right-16 -bottom-16 w-48 h-48 bg-emerald-500/10 rounded-full blur-2xl"></div>
+                <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div class="space-y-2 max-w-xl">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-400/20 text-emerald-300 border border-emerald-500/40">
+                            Siguiente Paso: Módulo 3
+                        </span>
+                        <h3 class="text-2xl font-bold text-white">¿Quieres pasar a la acción y empezar a comprar?</h3>
+                        <p class="text-sm text-slate-300 leading-relaxed">
+                            En la siguiente clase revelaremos las plataformas que se usan en Perú, las comisiones exactas, cómo abrir tu cuenta de broker y cómo diversificar con seguridad.
+                        </p>
+                    </div>
+                    <div>
+                        <a href="https://chat.whatsapp.com/TU_ENLACE_DE_WHATSAPP" target="_blank" 
+                           class="inline-flex items-center justify-center space-x-2 px-6 py-3.5 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold rounded-xl shadow-lg shadow-emerald-500/20 transition-all duration-150 w-full md:w-auto">
+                            <i data-lucide="message-circle" class="w-5 h-5 fill-current"></i>
+                            <span>Únete a nuestra Comunidad de WhatsApp</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- TAB 2: CONFIGURACIÓN DE GOOGLE SHEETS -->
+        <div id="section-sheets" class="hidden space-y-6">
+            <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm max-w-4xl mx-auto">
+                <div class="flex items-center space-x-3 mb-6">
+                    <div class="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-400">
+                        <i data-lucide="database" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Conecta tu Base de Datos de Google Sheets</h2>
+                        <p class="text-xs text-slate-400">Modifica los activos, rendimientos y dividendos desde tu propia hoja de cálculo</p>
+                    </div>
+                </div>
+
+                <!-- Input del Sheet URL -->
+                <div class="bg-slate-950 p-6 rounded-xl border border-slate-850 space-y-4">
+                    <div>
+                        <label for="sheetUrlInput" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Enlace CSV de tu Google Sheet publicado</label>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <input type="text" id="sheetUrlInput" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv"
+                                class="flex-grow px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <button onclick="conectarGoogleSheets()" class="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold rounded-lg text-sm transition flex items-center justify-center space-x-2">
+                                <i data-lucide="link" class="w-4 h-4"></i>
+                                <span>Conectar</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center pt-2">
+                        <button onclick="reiniciarBaseDatos()" class="text-xs text-red-400 hover:text-red-300 transition flex items-center space-x-1">
+                            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                            <span>Restablecer base de datos original</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Guía de Configuración -->
+                <div class="mt-8 space-y-4">
+                    <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+                        <i data-lucide="help-circle" class="w-5 h-5 text-emerald-400"></i>
+                        <span>¿Cómo crear y publicar tu Google Sheet?</span>
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                        <!-- Paso 1 -->
+                        <div class="p-4 bg-slate-950/50 rounded-xl border border-slate-850 space-y-2">
+                            <div class="w-6 h-6 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">1</div>
+                            <h4 class="font-bold text-white">Estructura la Hoja</h4>
+                            <p class="text-slate-400 leading-relaxed">Crea un Google Sheet con las siguientes columnas exactas:</p>
+                            <div class="bg-slate-900 p-2 rounded font-mono text-[10px] text-teal-300">
+                                Ticker, Nombre, Categoria, Crecimiento, Dividendo, Color
+                            </div>
+                        </div>
+                        
+                        <!-- Paso 2 -->
+                        <div class="p-4 bg-slate-950/50 rounded-xl border border-slate-850 space-y-2">
+                            <div class="w-6 h-6 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">2</div>
+                            <h4 class="font-bold text-white">Publica en la Web</h4>
+                            <p class="text-slate-400 leading-relaxed">Ve a <strong>Archivo > Compartir > Publicar en la Web</strong>. Cambia "Página web" por <strong>Valores separados por comas (.csv)</strong> y haz clic en Publicar.</p>
+                        </div>
+
+                        <!-- Paso 3 -->
+                        <div class="p-4 bg-slate-950/50 rounded-xl border border-slate-850 space-y-2">
+                            <div class="w-6 h-6 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">3</div>
+                            <h4 class="font-bold text-white">Pega y Disfruta</h4>
+                            <p class="text-slate-400 leading-relaxed">Copia el enlace generado, pégalo en la barra superior de esta pestaña y haz clic en <strong>Conectar</strong>. Tu portafolio se cargará de inmediato.</p>
+                        </div>
+                    </div>
+
+                    <!-- Código para plantilla rápida -->
+                    <div class="p-4 bg-slate-950 rounded-xl border border-slate-850 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h4 class="text-sm font-bold text-white">Estructura ejemplo para copiar y pegar</h4>
+                            <button onclick="copiarTemplateCSV()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg transition flex items-center space-x-1.5">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                <span>Copiar Estructura</span>
+                            </button>
+                        </div>
+                        <textarea id="csvTemplateArea" readonly class="w-full h-32 bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs font-mono text-emerald-300 focus:outline-none resize-none font-medium">Ticker,Nombre,Categoria,Crecimiento,Dividendo,Color
+AAPL,Apple,7 MAGNIFICAS,22.0,0.5,#22c55e
+BAP,Credicorp,BVL,8.5,4.2,#ef4444
+VOO,S&P 500 ETF,ETF,10.5,1.3,#3b82f6
+QQQ,Nasdaq 100 ETF,ETF,14.2,0.6,#f59e0b
+FERREYC1,Ferreycorp,BVL,6.5,8.5,#8b5cf6</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-900 bg-slate-950 py-6 text-center text-xs text-slate-500 mt-12">
+        <div class="max-w-7xl mx-auto px-4">
+            <p>Simulador Dinámico de Portafolio - Hecho con fines educativos.</p>
+            <p class="mt-1 text-[10px] text-slate-600">La rentabilidad pasada no garantiza retornos futuros. Invierte con educación y criterio propio.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts & Lógica de la Aplicación -->
+    <script>
+        // --- BASE DE DATOS DE RESPALDO (DEFAULT) ---
+        // Contiene la BVL líquida, las 7 Magníficas y los 5 ETFs más representativos.
+        const defaultAssets = [
+            // BVL
+            { Ticker: "BAP", Nombre: "Credicorp", Categoria: "BVL", Crecimiento: 8.5, Dividendo: 4.2, Color: "#a855f7" },
+            { Ticker: "IFS", Nombre: "Intercorp Financial", Categoria: "BVL", Crecimiento: 7.0, Dividendo: 5.5, Color: "#c084fc" },
+            { Ticker: "FERREYC1", Nombre: "Ferreycorp", Categoria: "BVL", Crecimiento: 6.5, Dividendo: 8.5, Color: "#d946ef" },
+            { Ticker: "ALICORC1", Nombre: "Alicorp", Categoria: "BVL", Crecimiento: 5.0, Dividendo: 3.5, Color: "#f472b6" },
+            { Ticker: "SCCO", Nombre: "Southern Copper", Categoria: "BVL", Crecimiento: 12.0, Dividendo: 4.8, Color: "#ec4899" },
+            { Ticker: "CVERDEC1", Nombre: "Cerro Verde", Categoria: "BVL", Crecimiento: 11.0, Dividendo: 5.0, Color: "#f43f5e" },
+            { Ticker: "VOLCABC1", Nombre: "Volcan Minera", Categoria: "BVL", Crecimiento: 3.0, Dividendo: 0.5, Color: "#64748b" },
+            
+            // 7 Magníficas
+            { Ticker: "AAPL", Nombre: "Apple", Categoria: "7 MAGNIFICAS", Crecimiento: 22.0, Dividendo: 0.5, Color: "#3b82f6" },
+            { Ticker: "MSFT", Nombre: "Microsoft", Categoria: "7 MAGNIFICAS", Crecimiento: 24.0, Dividendo: 0.7, Color: "#60a5fa" },
+            { Ticker: "GOOGL", Nombre: "Alphabet (Google)", Categoria: "7 MAGNIFICAS", Crecimiento: 20.0, Dividendo: 0.4, Color: "#06b6d4" },
+            { Ticker: "AMZN", Nombre: "Amazon", Categoria: "7 MAGNIFICAS", Crecimiento: 18.0, Dividendo: 0.0, Color: "#22d3ee" },
+            { Ticker: "NVDA", Nombre: "Nvidia", Categoria: "7 MAGNIFICAS", Crecimiento: 45.0, Dividendo: 0.02, Color: "#10b981" },
+            { Ticker: "META", Nombre: "Meta Platforms", Categoria: "7 MAGNIFICAS", Crecimiento: 21.0, Dividendo: 0.4, Color: "#34d399" },
+            { Ticker: "TSLA", Nombre: "Tesla", Categoria: "7 MAGNIFICAS", Crecimiento: 25.0, Dividendo: 0.0, Color: "#f59e0b" },
+
+            // 5 ETFs
+            { Ticker: "VOO", Nombre: "Vanguard S&P 500 ETF", Categoria: "ETF", Crecimiento: 10.5, Dividendo: 1.3, Color: "#ef4444" },
+            { Ticker: "QQQ", Nombre: "Invesco Nasdaq 100 ETF", Categoria: "ETF", Crecimiento: 14.2, Dividendo: 0.6, Color: "#f87171" },
+            { Ticker: "SMH", Nombre: "Semiconductors ETF", Categoria: "ETF", Crecimiento: 26.0, Dividendo: 0.5, Color: "#f97316" },
+            { Ticker: "EPU", Nombre: "MSCI Peru ETF", Categoria: "ETF", Crecimiento: 7.5, Dividendo: 4.5, Color: "#059669" },
+            { Ticker: "VNQ", Nombre: "Vanguard Real Estate ETF", Categoria: "ETF", Crecimiento: 6.0, Dividendo: 3.8, Color: "#eab308" }
+        ];
+
+        // --- ESTADO GENERAL ---
+        let activosCargados = [...defaultAssets];
+        // Iniciamos con una cartera predefinida balanceada para acelerar la interacción inicial
+        let portafolioSeleccionado = {
+            "VOO": 25,
+            "QQQ": 25,
+            "EPU": 25,
+            "BAP": 25
+        };
+        let monedaActual = 'S/.';
+        let chartInstance = null;
+        let activeFilter = 'TODOS';
+
+        // --- INICIALIZACIÓN ---
+        window.onload = function() {
+            lucide.createIcons();
+            
+            // Cargar configuración previa si existe en LocalStorage
+            const storedSheetUrl = localStorage.getItem('googleSheetUrl');
+            if (storedSheetUrl) {
+                document.getElementById('sheetUrlInput').value = storedSheetUrl;
+                cargarDesdeSheets(storedSheetUrl, false);
+            } else {
+                actualizarCatalogoUI();
+                actualizarSlidersUI();
+                actualizarCalculos();
+            }
+        };
+
+        // Cambiar pestañas (Simulador vs Sheets Config)
+        function switchTab(tabId) {
+            const btnSim = document.getElementById('tab-simulador');
+            const btnSheets = document.getElementById('tab-sheets');
+            const secSim = document.getElementById('section-simulador');
+            const secSheets = document.getElementById('section-sheets');
+
+            if (tabId === 'simulador') {
+                secSim.classList.remove('hidden');
+                secSheets.classList.add('hidden');
+                btnSim.className = "flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-sm font-semibold transition bg-emerald-500 text-slate-950 shadow-sm";
+                btnSheets.className = "flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-sm font-semibold transition text-slate-400 hover:text-white";
+            } else {
+                secSim.classList.add('hidden');
+                secSheets.classList.remove('hidden');
+                btnSheets.className = "flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-sm font-semibold transition bg-emerald-500 text-slate-950 shadow-sm";
+                btnSim.className = "flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-sm font-semibold transition text-slate-400 hover:text-white";
+            }
+        }
+
+        // --- STREAMING_CHUNK: Sistema de Notificaciones Flotantes (Toasts)... ---
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastIconWrapper = document.getElementById('toast-icon-wrapper');
+            const toastIcon = document.getElementById('toast-icon');
+            const toastMsg = document.getElementById('toast-msg');
+
+            toastMsg.innerText = msg;
+            
+            if (type === 'success') {
+                toastIconWrapper.className = "p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400";
+                toastIcon.setAttribute('data-lucide', 'check-circle');
+            } else {
+                toastIconWrapper.className = "p-1.5 rounded-lg bg-red-500/20 text-red-400";
+                toastIcon.setAttribute('data-lucide', 'alert-circle');
+            }
+
+            lucide.createIcons();
+            
+            // Animación Entrada
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }, 3000);
+        }
+
+        // Copiar plantilla ejemplo
+        function copiarTemplateCSV() {
+            const area = document.getElementById('csvTemplateArea');
+            area.select();
+            document.execCommand('copy');
+            showToast("¡Plantilla CSV copiada al portapapeles!");
+        }
+
+        // --- STREAMING_CHUNK: Sincronizando con Google Sheets... ---
+        function conectarGoogleSheets() {
+            const url = document.getElementById('sheetUrlInput').value.trim();
+            if (!url) {
+                showToast("Por favor ingresa un enlace válido.", "error");
+                return;
+            }
+            cargarDesdeSheets(url, true);
+        }
+
+        // Restaurar base de datos local predefinida
+        function reiniciarBaseDatos() {
+            localStorage.removeItem('googleSheetUrl');
+            document.getElementById('sheetUrlInput').value = '';
+            activosCargados = [...defaultAssets];
+            portafolioSeleccionado = {
+                "VOO": 25,
+                "QQQ": 25,
+                "EPU": 25,
+                "BAP": 25
+            };
+            
+            // UI Status
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            const bar = document.getElementById('db-status-bar');
+
+            bar.className = "bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs";
+            dot.className = "relative inline-flex rounded-full h-2 w-2 bg-blue-500";
+            text.className = "text-blue-300 font-medium";
+            text.innerText = "Usando base de datos predefinida de la BVL, 7 Magníficas y ETFs";
+
+            actualizarCatalogoUI();
+            actualizarSlidersUI();
+            actualizarCalculos();
+            showToast("Base de datos local restablecida correctamente.");
+        }
+
+        // Fetch y parseo de Google Sheets CSV
+        function cargarDesdeSheets(url, mostrarExito) {
+            Papa.parse(url, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    const data = results.data;
+                    
+                    // Validar estructura básica
+                    if (data.length === 0 || !data[0].Ticker || !data[0].Nombre || !data[0].Crecimiento) {
+                        showToast("Estructura de Google Sheet inválida. Revisa las columnas.", "error");
+                        return;
+                    }
+
+                    // Mapear y parsear tipos
+                    activosCargados = data.map(item => ({
+                        Ticker: item.Ticker.trim(),
+                        Nombre: item.Nombre.trim(),
+                        Categoria: item.Categoria ? item.Categoria.toUpperCase().trim() : 'TODOS',
+                        Crecimiento: parseFloat(item.Crecimiento) || 0,
+                        Dividendo: parseFloat(item.Dividendo) || 0,
+                        Color: item.Color ? item.Color.trim() : '#10b981'
+                    }));
+
+                    localStorage.setItem('googleSheetUrl', url);
+                    
+                    // UI Status
+                    const dot = document.getElementById('status-dot');
+                    const text = document.getElementById('status-text');
+                    const bar = document.getElementById('db-status-bar');
+
+                    bar.className = "bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs";
+                    dot.className = "relative inline-flex rounded-full h-2 w-2 bg-emerald-500";
+                    text.className = "text-emerald-300 font-medium";
+                    text.innerText = `Sincronizado con Google Sheets (${activosCargados.length} activos cargados correctamente)`;
+
+                    // Limpiar portafolio de activos obsoletos que no existan en la hoja nueva
+                    const nuevosTickers = activosCargados.map(a => a.Ticker);
+                    Object.keys(portafolioSeleccionado).forEach(ticker => {
+                        if (!nuevosTickers.includes(ticker)) {
+                            delete portafolioSeleccionado[ticker];
+                        }
+                    });
+
+                    actualizarCatalogoUI();
+                    actualizarSlidersUI();
+                    actualizarCalculos();
+
+                    if (mostrarExito) {
+                        showToast(`¡Conectado exitosamente! ${activosCargados.length} activos cargados.`);
+                        switchTab('simulador');
+                    }
+                },
+                error: function(err) {
+                    console.error(err);
+                    showToast("No se pudo descargar la hoja. ¿Está publicada como CSV de forma pública?", "error");
+                }
+            });
+        }
+
+        // --- STREAMING_CHUNK: Renderizando catálogo de selección de activos... ---
+        function actualizarCatalogoUI() {
+            const catalogo = document.getElementById('catalogoActivos');
+            catalogo.innerHTML = '';
+
+            const filtrados = activosCargados.filter(act => {
+                if (activeFilter === 'TODOS') return true;
+                return act.Categoria === activeFilter;
+            });
+
+            if (filtrados.length === 0) {
+                catalogo.innerHTML = `<div class="text-center text-slate-500 text-xs py-4">No hay activos disponibles en esta categoría.</div>`;
+                return;
+            }
+
+            filtrados.forEach(act => {
+                const yaAgregado = portafolioSeleccionado.hasOwnProperty(act.Ticker);
+                
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center bg-slate-950 p-3 rounded-xl border border-slate-900/60 hover:border-slate-800 transition duration-150";
+                div.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: ${act.Color}"></span>
+                        <div>
+                            <span class="font-bold text-sm text-white">${act.Ticker}</span>
+                            <span class="text-[10px] text-slate-400 block">${act.Nombre}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="text-right text-[10px]">
+                            <span class="text-slate-400 block">Crec: <strong class="text-emerald-400">${act.Crecimiento}%</strong></span>
+                            <span class="text-slate-400 block">Div: <strong class="text-indigo-400">${act.Dividendo}%</strong></span>
+                        </div>
+                        <button onclick="toggleActivo('${act.Ticker}')" class="p-2 rounded-lg transition-all ${
+                            yaAgregado 
+                            ? 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20' 
+                            : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
+                        }">
+                            <i data-lucide="${yaAgregado ? 'minus' : 'plus'}" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                `;
+                catalogo.appendChild(div);
+            });
+
+            lucide.createIcons();
+        }
+
+        // Alternar categoría de filtros
+        function filtrarActivos(categoria) {
+            activeFilter = categoria;
+            ['TODOS', 'BVL', '7-MAGNIFICAS', 'ETF'].forEach(cat => {
+                const btn = document.getElementById(`filter-${cat}`);
+                if (cat === categoria || (categoria === '7 MAGNIFICAS' && cat === '7-MAGNIFICAS')) {
+                    btn.className = "py-1.5 px-2 rounded-lg font-semibold transition bg-slate-800 text-white";
+                } else {
+                    btn.className = "py-1.5 px-2 rounded-lg font-semibold transition text-slate-400 hover:text-white";
+                }
+            });
+            actualizarCatalogoUI();
+        }
+
+        // Agregar o eliminar del portafolio activo
+        function toggleActivo(ticker) {
+            if (portafolioSeleccionado.hasOwnProperty(ticker)) {
+                delete portafolioSeleccionado[ticker];
+            } else {
+                // Empezar con un valor proporcional
+                const keys = Object.keys(portafolioSeleccionado);
+                const nuevoPct = keys.length === 0 ? 100 : 0;
+                portafolioSeleccionado[ticker] = nuevoPct;
+            }
+            
+            actualizarCatalogoUI();
+            actualizarSlidersUI();
+            actualizarCalculos();
+        }
+
+        // Vaciar portafolio completo
+        function vaciarPortafolio() {
+            portafolioSeleccionado = {};
+            actualizarCatalogoUI();
+            actualizarSlidersUI();
+            actualizarCalculos();
+            showToast("Se vació la cartera actual.");
+        }
+
+        // --- STREAMING_CHUNK: Creando sliders dinámicos de distribución... ---
+        function actualizarSlidersUI() {
+            const container = document.getElementById('slidersPortafolio');
+            const keys = Object.keys(portafolioSeleccionado);
+            
+            document.getElementById('activeCount').innerText = `${keys.length} ${keys.length === 1 ? 'activo' : 'activos'} elegidos`;
+
+            if (keys.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-slate-500 text-sm italic" id="emptySlidersPlaceholder">
+                        <i data-lucide="folder-open" class="w-8 h-8 mx-auto mb-2 text-slate-600 block"></i>
+                        No has agregado activos. Elige algunos en el catálogo superior.
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            container.innerHTML = '';
+            keys.forEach(ticker => {
+                const act = activosCargados.find(a => a.Ticker === ticker);
+                if (!act) return;
+
+                const div = document.createElement('div');
+                div.className = "p-3 bg-slate-950/40 rounded-xl border border-slate-800/50";
+                div.innerHTML = `
+                    <div class="flex justify-between items-center mb-1">
+                        <div class="flex flex-col">
+                            <span class="font-bold text-white text-sm">${act.Ticker} (${act.Nombre})</span>
+                            <span class="text-[10px] text-slate-500 font-medium">Crecimiento: ${act.Crecimiento}% | Dividendo: ${act.Dividendo}%</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <span class="font-bold text-emerald-400 text-sm" id="pct-val-${ticker}">${portafolioSeleccionado[ticker]}%</span>
+                            <button onclick="toggleActivo('${ticker}')" class="text-slate-600 hover:text-red-400 transition" title="Eliminar de portafolio">
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <input type="range" id="slider-${ticker}" min="0" max="100" value="${portafolioSeleccionado[ticker]}" oninput="moverSlider('${ticker}')" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+                `;
+                container.appendChild(div);
+            });
+
+            lucide.createIcons();
+        }
+
+        // Manejar el movimiento de los sliders
+        function moverSlider(ticker) {
+            const val = parseInt(document.getElementById(`slider-${ticker}`).value);
+            portafolioSeleccionado[ticker] = val;
+            document.getElementById(`pct-val-${ticker}`).innerText = `${val}%`;
+            actualizarCalculos();
+        }
+
+        // Auto balancear pesos proporcionalmente para llegar al 100%
+        function autoBalancear() {
+            const keys = Object.keys(portafolioSeleccionado);
+            if (keys.length === 0) {
+                showToast("Por favor, agrega activos primero.", "error");
+                return;
+            }
+
+            const totalSuma = keys.reduce((acc, k) => acc + portafolioSeleccionado[k], 0);
+
+            if (totalSuma === 0) {
+                // Distribuir equitativamente
+                const equitativo = Math.floor(100 / keys.length);
+                let resto = 100 - (equitativo * keys.length);
+                keys.forEach((k, idx) => {
+                    portafolioSeleccionado[k] = equitativo + (idx === 0 ? resto : 0);
+                });
+            } else {
+                // Normalizar al 100% proporcionalmente
+                let acumulado = 0;
+                keys.forEach((k, idx) => {
+                    if (idx === keys.length - 1) {
+                        portafolioSeleccionado[k] = 100 - acumulado;
+                    } else {
+                        const calculado = Math.round((portafolioSeleccionado[k] / totalSuma) * 100);
+                        portafolioSeleccionado[k] = calculado;
+                        acumulado += calculado;
+                    }
+                });
+            }
+
+            actualizarSlidersUI();
+            actualizarCalculos();
+            showToast("Balanceado automáticamente al 100%.");
+        }
+
+        // Configurar moneda
+        function setMoneda(simbolo) {
+            monedaActual = simbolo;
+            document.getElementById('currencySymbol').innerText = simbolo;
+            
+            const btnSoles = document.getElementById('btnSoles');
+            const btnDolares = document.getElementById('btnDolares');
+            
+            if (simbolo === 'S/.') {
+                btnSoles.className = "py-2 px-3 rounded-lg text-sm font-medium transition-all bg-emerald-500 text-slate-950 shadow-sm font-bold";
+                btnDolares.className = "py-2 px-3 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white";
+                if(document.getElementById('capitalInput').value == "3000") {
+                    document.getElementById('capitalInput').value = "10000";
+                }
+            } else {
+                btnDolares.className = "py-2 px-3 rounded-lg text-sm font-medium transition-all bg-emerald-500 text-slate-950 shadow-sm font-bold";
+                btnSoles.className = "py-2 px-3 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white";
+                if(document.getElementById('capitalInput').value == "10000") {
+                    document.getElementById('capitalInput').value = "3000";
+                }
+            }
+            actualizarCalculos();
+        }
+
+        // Formato moneda
+        function fMoney(val) {
+            return `${monedaActual} ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        // --- STREAMING_CHUNK: Calculando retornos ponderados y compuesto a futuro... ---
+        function actualizarCalculos() {
+            const capital = parseFloat(document.getElementById('capitalInput').value) || 0;
+            const years = parseInt(document.getElementById('yearsProjection').value) || 5;
+            document.getElementById('yearsLabel').innerText = `${years} ${years === 1 ? 'año' : 'años'}`;
+            const keys = Object.keys(portafolioSeleccionado);
+            
+            // Suma del porcentaje asignado
+            const totalSumaPct = keys.reduce((acc, k) => acc + portafolioSeleccionado[k], 0);
+            
+            const totalPctLabel = document.getElementById('totalPctLabel');
+            const totalPctBar = document.getElementById('totalPctBar');
+            const alertMessage = document.getElementById('alertMessage');
+
+            totalPctLabel.innerText = `${totalSumaPct}%`;
+            totalPctBar.style.width = `${Math.min(totalSumaPct, 100)}%`;
+
+            if (totalSumaPct === 100) {
+                totalPctLabel.className = "text-emerald-400 font-extrabold";
+                totalPctBar.className = "bg-gradient-to-r from-emerald-500 to-teal-400 h-full transition-all duration-300";
+                alertMessage.classList.add('hidden');
+            } else {
+                totalPctLabel.className = "text-yellow-500 font-extrabold";
+                totalPctBar.className = "bg-yellow-500 h-full transition-all duration-300";
+                if (keys.length > 0) alertMessage.classList.remove('hidden');
+            }
+
+            // Cálculos Ponderados
+            let ponderadoCrecimiento = 0;
+            let ponderadoDividendo = 0;
+            let totalDivEstAnual = 0;
+            let tablaHTML = '';
+
+            keys.forEach(k => {
+                const act = activosCargados.find(a => a.Ticker === k);
+                if (!act) return;
+
+                const porcentaje = portafolioSeleccionado[k];
+                const invertido = capital * (porcentaje / 100);
+                const divEst = invertido * (act.Dividendo / 100);
+
+                ponderadoCrecimiento += act.Crecimiento * (porcentaje / 100);
+                ponderadoDividendo += act.Dividendo * (porcentaje / 100);
+                totalDivEstAnual += divEst;
+
+                // Generar filas de la tabla de resumen
+                if (porcentaje > 0) {
+                    tablaHTML += `
+                        <div class="flex justify-between items-center bg-slate-950 p-2.5 rounded-xl border border-slate-900">
+                            <div class="flex items-center space-x-2">
+                                <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${act.Color}"></span>
+                                <span class="font-bold text-slate-200">${act.Ticker}</span>
+                                <span class="text-[10px] text-slate-500">${porcentaje}%</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="font-bold text-slate-100 block">${fMoney(invertido)}</span>
+                                <span class="text-[9px] text-slate-400">Div: ${fMoney(divEst)}/año</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            // Asignar tabla
+            document.getElementById('tablaActivosActivos').innerHTML = tablaHTML || `
+                <div class="text-center py-4 text-slate-500 italic font-medium">No hay distribución activa.</div>
+            `;
+
+            // Actualizar KPIs de Texto
+            document.getElementById('resCrecimiento').innerText = `${ponderadoCrecimiento.toFixed(2)}% / año`;
+            document.getElementById('resDividendo').innerText = `${ponderadoDividendo.toFixed(2)}% / año`;
+            
+            document.getElementById('montoInversionLabel').innerText = fMoney(capital);
+            document.getElementById('montoDividendosAnual').innerText = fMoney(totalDivEstAnual);
+
+            // Proyección Interés Compuesto
+            // Fórmula: Valor = Capital * (1 + Rentabilidad_Total)^years
+            const tasaTotal = (ponderadoCrecimiento + ponderadoDividendo) / 100;
+            const valorCompuesto = capital * Math.pow(1 + tasaTotal, years);
+            document.getElementById('valorProyectado5Anios').innerText = fMoney(valorCompuesto);
+
+            // Refrescar el Gráfico
+            actualizarGrafico(keys);
+        }
+
+        // --- STREAMING_CHUNK: Graficando distribución con Chart.js... ---
+        function actualizarGrafico(keys) {
+            const labels = [];
+            const data = [];
+            const colors = [];
+
+            keys.forEach(k => {
+                const act = activosCargados.find(a => a.Ticker === k);
+                const pct = portafolioSeleccionado[k];
+                if (act && pct > 0) {
+                    labels.push(act.Ticker);
+                    data.push(pct);
+                    colors.push(act.Color);
+                }
+            });
+
+            if (chartInstance) {
+                chartInstance.data.datasets[0].data = data;
+                chartInstance.data.datasets[0].backgroundColor = colors;
+                chartInstance.data.labels = labels;
+                chartInstance.update();
+            } else {
+                const ctx = document.getElementById('portfolioChart').getContext('2d');
+                chartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: colors,
+                            borderColor: '#0f172a',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return ` ${context.label}: ${context.raw}%`;
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '72%'
+                    }
+                });
+            }
+        }
+    </script>
+</body>
+</html>
