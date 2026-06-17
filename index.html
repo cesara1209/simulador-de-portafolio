@@ -352,7 +352,7 @@
         // Reemplaza esta URL de abajo con tu propio enlace de Google Sheets publicado como CSV
         // Estructura requerida en tu hoja: Ticker, Nombre, Categoria, Crecimiento, Color, Moneda
         // =========================================================================
-        const GOOGLE_SHEETS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vROs0mSl6vwUEuX3qZUncgh9fyG1I0dAYY2it_jOFZdc9zXuUx-6lQiB4GHeNQyI5b1HhV5xUl_fQU4/pubhtml"; 
+        const GOOGLE_SHEETS_URL = ""; 
 
         // Base de datos local de respaldo con datos de los últimos 10 años (sin dividendos)
         // Adicionalmente se incluye la propiedad "Moneda" (PEN o USD)
@@ -385,6 +385,11 @@
         // --- ESTADO GENERAL ---
         // Variables internas de memoria para registrar qué está haciendo el usuario en pantalla.
         let activosCargados = [...defaultAssets];
+
+        // NOTA DE PERSONALIZACIÓN DEL PORTAFOLIO INICIAL:
+        // Estos son los activos que aparecerán pre-seleccionados al 25% cada uno al abrir la web.
+        // Si los cambias en tu Google Sheets, asegúrate de actualizar las claves de abajo (ej. "VOO", "QQQ")
+        // con los Tickers que tú mismo hayas definido en tu hoja de cálculo para que no cargue vacío.
         let portafolioSeleccionado = {
             "VOO": 25,
             "QQQ": 25,
