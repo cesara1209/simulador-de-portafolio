@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulador de Portafolio de Crecimiento - Módulo 2</title>
+    
     <!-- 
         =========================================================================
         BLOQUE 1: IMPORTACIÓN DE LIBRERÍAS EXTERNAS (CDNs)
@@ -53,7 +54,7 @@
         Aparece al inicio de la navegación exigiendo al usuario leer y aceptar los 
         términos de carácter puramente educativo de la simulación.
     -->
-    <div id="disclaimer-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md transition-opacity duration-300">
+    <div id="disclaimer-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md transition-opacity duration-300">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-6 transform scale-100 transition-transform duration-300">
             <div class="flex items-center space-x-3 text-amber-500">
                 <div class="p-2 bg-amber-500/10 rounded-xl">
@@ -109,7 +110,7 @@
             <div class="flex items-center space-x-2 bg-slate-950/80 px-3 py-1.5 rounded-lg border border-slate-800 text-xs text-slate-400">
                 <span class="relative flex h-2 w-2">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span id="sync-dot" class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    <span id="sync-dot" class="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
                 </span>
                 <span id="sync-status">Sincronizando base de datos...</span>
             </div>
@@ -201,16 +202,18 @@
                     </div>
 
                     <!-- Botonera de filtros por Categoría de Activo -->
-                    <div class="grid grid-cols-4 gap-2 mb-4 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
+                    <div id="filter-container" class="grid grid-cols-4 gap-2 mb-4 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
                         <button onclick="filtrarActivos('TODOS')" id="filter-TODOS" class="py-1.5 px-2 rounded-lg transition bg-slate-800 text-white">Todos</button>
                         <button onclick="filtrarActivos('BVL')" id="filter-BVL" class="py-1.5 px-2 rounded-lg transition text-slate-400 hover:text-white">BVL</button>
-                        <button onclick="filtrarActivos('7 MAGNIFICAS')" id="filter-7-MAGNIFICAS" class="py-1.5 px-2 rounded-lg transition text-slate-400 hover:text-white">Magníficas</button>
+                        <button onclick="filtrarActivos('7 MAGNIFICAS')" id="filter-7-MAGNIFICAS" class="py-1.5 px-2 rounded-lg transition text-slate-400 hover:text-white font-sans text-[10px] sm:text-xs">Magníficas</button>
                         <button onclick="filtrarActivos('ETF')" id="filter-ETF" class="py-1.5 px-2 rounded-lg transition text-slate-400 hover:text-white">ETFs</button>
                     </div>
 
                     <!-- Lista dinámica de activos generados mediante JS -->
                     <div class="max-h-72 overflow-y-auto pr-2 space-y-2" id="catalogoActivos">
-                        <!-- Cargado de forma dinámica -->
+                        <div class="text-center py-8 text-slate-500 text-xs animate-pulse">
+                            Cargando catálogo desde Google Sheets...
+                        </div>
                     </div>
                 </div>
 
@@ -295,7 +298,7 @@
                 <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-sm">
                     <h4 class="text-sm font-bold text-white mb-3">Resumen de Activos Seleccionados</h4>
                     <div class="space-y-2 text-xs" id="tablaActivosActivos">
-                        <!-- Las filas dinámicas se insertarán aquí desde JavaScript -->
+                        <div class="text-center py-4 text-slate-500 italic font-medium">Cargando resumen...</div>
                     </div>
                 </div>
             </div>
@@ -348,90 +351,38 @@
     -->
     <script>
         // =========================================================================
-        // CONFIGURACIÓN DE TU GOOGLE SHEET (ENLACE CSV PUBLICADO)
-        // Reemplaza esta URL de abajo con tu propio enlace de Google Sheets publicado como CSV
-        // Estructura requerida en tu hoja: Ticker, Nombre, Categoria, Crecimiento, Color, Moneda
+        // CONFIGURACIÓN DE TU ENLACE EXCLUSIVO DE GOOGLE SHEETS
+        // Vinculación directa mediante formato exportado CSV en tiempo real.
         // =========================================================================
-        const GOOGLE_SHEETS_URL = ""; 
-
-        // Base de datos local de respaldo con datos de los últimos 10 años (sin dividendos)
-        // Adicionalmente se incluye la propiedad "Moneda" (PEN o USD)
-        const defaultAssets = [
-            // BVL (Empresas más líquidas / representativas)
-            { Ticker: "BAP", Nombre: "Credicorp", Categoria: "BVL", Crecimiento: 8.50, Color: "#a855f7", Moneda: "USD" },
-            { Ticker: "IFS", Nombre: "Intercorp Financial Services", Categoria: "BVL", Crecimiento: 7.20, Color: "#c084fc", Moneda: "USD" },
-            { Ticker: "FERREYC1", Nombre: "Ferreycorp", Categoria: "BVL", Crecimiento: 6.80, Color: "#d946ef", Moneda: "PEN" },
-            { Ticker: "ALICORC1", Nombre: "Alicorp", Categoria: "BVL", Crecimiento: 5.10, Color: "#f472b6", Moneda: "PEN" },
-            { Ticker: "SCCO", Nombre: "Southern Copper Corporation", Categoria: "BVL", Crecimiento: 12.40, Color: "#ec4899", Moneda: "USD" },
-            { Ticker: "CVERDEC1", Nombre: "Sociedad Minera Cerro Verde", Categoria: "BVL", Crecimiento: 11.50, Color: "#f43f5e", Moneda: "USD" },
-            
-            // Las 7 Magníficas
-            { Ticker: "AAPL", Nombre: "Apple Inc.", Categoria: "7 MAGNIFICAS", Crecimiento: 22.40, Color: "#3b82f6", Moneda: "USD" },
-            { Ticker: "MSFT", Nombre: "Microsoft Corporation", Categoria: "7 MAGNIFICAS", Crecimiento: 24.80, Color: "#60a5fa", Moneda: "USD" },
-            { Ticker: "GOOGL", Nombre: "Alphabet (Google)", Categoria: "7 MAGNIFICAS", Crecimiento: 19.50, Color: "#06b6d4", Moneda: "USD" },
-            { Ticker: "AMZN", Nombre: "Amazon.com Inc.", Categoria: "7 MAGNIFICAS", Crecimiento: 18.20, Color: "#22d3ee", Moneda: "USD" },
-            { Ticker: "NVDA", Nombre: "Nvidia Corporation", Categoria: "7 MAGNIFICAS", Crecimiento: 48.50, Color: "#10b981", Moneda: "USD" },
-            { Ticker: "META", Nombre: "Meta Platforms", Categoria: "7 MAGNIFICAS", Crecimiento: 21.10, Color: "#34d399", Moneda: "USD" },
-            { Ticker: "TSLA", Nombre: "Tesla Inc.", Categoria: "7 MAGNIFICAS", Crecimiento: 26.30, Color: "#f59e0b", Moneda: "USD" },
-
-            // 5 ETFs Clave
-            { Ticker: "VOO", Nombre: "Vanguard S&P 500 ETF", Categoria: "ETF", Crecimiento: 11.20, Color: "#ef4444", Moneda: "USD" },
-            { Ticker: "QQQ", Nombre: "Invesco Nasdaq 100 ETF", Categoria: "ETF", Crecimiento: 14.80, Color: "#f87171", Moneda: "USD" },
-            { Ticker: "SMH", Nombre: "VanEck Semiconductor ETF", Categoria: "ETF", Crecimiento: 24.60, Color: "#f97316", Moneda: "USD" },
-            { Ticker: "EPU", Nombre: "iShares MSCI Peru ETF", Categoria: "ETF", Crecimiento: 6.90, Color: "#059669", Moneda: "USD" },
-            { Ticker: "VNQ", Nombre: "Vanguard Real Estate ETF", Categoria: "ETF", Crecimiento: 5.50, Color: "#eab308", Moneda: "USD" }
-        ];
+        const GOOGLE_SHEETS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vROs0mSl6vwUEuX3qZUncgh9fyG1I0dAYY2it_jOFZdc9zXuUx-6lQiB4GHeNQyI5b1HhV5xUl_fQU4/pub?output=csv"; 
 
         // --- ESTADO GENERAL ---
-        // Variables internas de memoria para registrar qué está haciendo el usuario en pantalla.
-        let activosCargados = [...defaultAssets];
-
-        // NOTA DE PERSONALIZACIÓN DEL PORTAFOLIO INICIAL:
-        // Estos son los activos que aparecerán pre-seleccionados al 25% cada uno al abrir la web.
-        // Si los cambias en tu Google Sheets, asegúrate de actualizar las claves de abajo (ej. "VOO", "QQQ")
-        // con los Tickers que tú mismo hayas definido en tu hoja de cálculo para que no cargue vacío.
-        let portafolioSeleccionado = {
-            "VOO": 25,
-            "QQQ": 25,
-            "EPU": 25,
-            "BAP": 25
-        };
+        // Se inicializan todas las variables vacías. Dependencia al 100% de Google Sheets.
+        let activosCargados = [];
+        let portafolioSeleccionado = {};
         let monedaActual = 'S/.';
         let chartInstance = null;
         let activeFilter = 'TODOS';
 
         // --- MANEJO DEL DISCLAIMER ---
-        // Se ejecuta al dar clic en aceptar el disclaimer inicial para remover el modal.
         function acceptDisclaimer() {
             const modal = document.getElementById('disclaimer-modal');
             modal.classList.add('opacity-0');
             setTimeout(() => {
                 modal.classList.add('hidden');
-                // Guardar en sessionStorage para que no irrumpa en la navegación inmediata
                 sessionStorage.setItem('disclaimerAccepted', 'true');
             }, 300);
         }
 
         // --- INICIALIZACIÓN ---
-        // Se activa apenas se abre la página web en el navegador del usuario.
         window.onload = function() {
-            // Renderiza los iconos de la librería Lucide
             lucide.createIcons();
 
-            // Verificar si ya se aceptó el disclaimer en esta sesión
             if (sessionStorage.getItem('disclaimerAccepted') === 'true') {
                 document.getElementById('disclaimer-modal').classList.add('hidden');
             }
             
-            // Cargar datos desde Google Sheets si hay url provista
-            if (GOOGLE_SHEETS_URL && GOOGLE_SHEETS_URL.trim() !== "") {
-                cargarDesdeSheets(GOOGLE_SHEETS_URL);
-            } else {
-                actualizarEstadoSync("local");
-                actualizarCatalogoUI();
-                actualizarSlidersUI();
-                actualizarCalculos();
-            }
+            cargarDesdeSheets(GOOGLE_SHEETS_URL);
         };
 
         // Actualizar UI del estado de sincronización
@@ -439,20 +390,16 @@
             const dot = document.getElementById('sync-dot');
             const status = document.getElementById('sync-status');
             
-            if (tipo === "local") {
-                dot.className = "relative inline-flex rounded-full h-2 w-2 bg-emerald-500";
-                status.innerText = "Base de datos local cargada (CAGR de 10 años)";
-            } else if (tipo === "success") {
+            if (tipo === "success") {
                 dot.className = "relative inline-flex rounded-full h-2 w-2 bg-emerald-500 animate-pulse";
                 status.innerText = "Sincronizado exitosamente con Google Sheets";
             } else {
-                dot.className = "relative inline-flex rounded-full h-2 w-2 bg-red-500";
-                status.innerText = "Error de sincronización. Usando base de datos de respaldo";
+                dot.className = "relative inline-flex rounded-full h-2 w-2 bg-red-500 animate-pulse";
+                status.innerText = "Error de sincronización con la base de datos de Google Sheets";
             }
         }
 
         // --- CONECTIVIDAD GOOGLE SHEETS VIA PAPAPARSE ---
-        // Realiza una petición asíncrona a la URL provista, procesa el CSV y actualiza la lista.
         function cargarDesdeSheets(url) {
             Papa.parse(url, {
                 download: true,
@@ -461,31 +408,59 @@
                 complete: function(results) {
                     const data = results.data;
                     
-                    // Validación de campos clave
-                    if (data.length === 0 || !data[0].Ticker || !data[0].Nombre || !data[0].Crecimiento) {
-                        showToast("Estructura de Google Sheets no compatible. Usando respaldo.", "error");
+                    if (data.length === 0) {
+                        showToast("La hoja de cálculo de Google Sheets está vacía.", "error");
                         actualizarEstadoSync("error");
-                        activosCargados = [...defaultAssets];
-                    } else {
-                        // Mapeo estructurado para evitar que errores tipográficos en el excel rompan el JS
-                        activosCargados = data.map(item => ({
-                            Ticker: item.Ticker.trim(),
-                            Nombre: item.Nombre.trim(),
-                            Categoria: item.Categoria ? item.Categoria.toUpperCase().trim() : 'TODOS',
-                            Crecimiento: parseFloat(item.Crecimiento) || 0,
-                            Color: item.Color ? item.Color.trim() : '#10b981',
-                            Moneda: item.Moneda ? item.Moneda.toUpperCase().trim() : 'USD'
-                        }));
-                        actualizarEstadoSync("success");
-                        showToast(`¡Conectado a Google Sheets! ${activosCargados.length} activos listos.`);
+                        return;
                     }
 
-                    // Limpieza preventiva de activos de portafolio que no existan en el nuevo set de datos
-                    const codigosValidos = activosCargados.map(a => a.Ticker);
-                    Object.keys(portafolioSeleccionado).forEach(ticker => {
-                        if (!codigosValidos.includes(ticker)) {
-                            delete portafolioSeleccionado[ticker];
+                    // Mapeo estructurado con normalización inteligente de cabeceras
+                    activosCargados = data.map(row => {
+                        // Creamos un subobjeto con claves en minúsculas, sin tildes ni espacios para prevenir desajustes
+                        const norm = {};
+                        for (let k in row) {
+                            if (row.hasOwnProperty(k)) {
+                                const nk = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                                norm[nk] = row[k];
+                            }
                         }
+
+                        // Asignación con múltiples respaldos por si cambian de nombre la cabecera
+                        const ticker = norm.ticker || norm.symbol || norm.activo || "";
+                        const nombre = norm.nombre || norm.name || norm.empresa || "";
+                        const categoria = norm.categoria || norm.category || norm.tipo || "OTROS";
+                        const crecimiento = parseFloat(norm.crecimiento || norm.retorno || norm.cagr || norm.rendimiento || 0);
+                        const color = norm.color || "#10b981";
+                        const moneda = (norm.moneda || norm.currency || norm.divisa || "USD").toUpperCase().trim();
+
+                        return {
+                            Ticker: ticker.trim(),
+                            Nombre: nombre.trim(),
+                            Categoria: categoria.trim().toUpperCase(),
+                            Crecimiento: crecimiento,
+                            Color: color.trim(),
+                            Moneda: moneda
+                        };
+                    }).filter(act => act.Ticker !== "");
+
+                    if (activosCargados.length === 0) {
+                        showToast("No se encontraron activos válidos en tu Google Sheets.", "error");
+                        actualizarEstadoSync("error");
+                        return;
+                    }
+
+                    actualizarEstadoSync("success");
+                    showToast(`¡Conectado! Se han cargado ${activosCargados.length} activos en vivo.`);
+
+                    // --- CARGA DE PORTAFOLIO INICIAL DINÁMICO ---
+                    // Selecciona automáticamente los primeros 4 activos cargados del Excel para evitar cargar vacío.
+                    portafolioSeleccionado = {};
+                    const iniciales = activosCargados.slice(0, 4);
+                    const pesoEquitativo = Math.floor(100 / iniciales.length);
+                    let resto = 100 - (pesoEquitativo * iniciales.length);
+                    
+                    iniciales.forEach((act, idx) => {
+                        portafolioSeleccionado[act.Ticker] = pesoEquitativo + (idx === 0 ? resto : 0);
                     });
 
                     actualizarCatalogoUI();
@@ -494,17 +469,20 @@
                 },
                 error: function(err) {
                     console.error("PapaParse error: ", err);
-                    showToast("No se pudo conectar a Google Sheets. Cargando base de datos por defecto.", "error");
+                    showToast("No se pudo conectar al enlace de Google Sheets.", "error");
                     actualizarEstadoSync("error");
-                    activosCargados = [...defaultAssets];
-                    actualizarCatalogoUI();
-                    actualizarSlidersUI();
-                    actualizarCalculos();
+                    document.getElementById('catalogoActivos').innerHTML = `
+                        <div class="text-center py-8 text-red-400 text-sm">
+                            <i data-lucide="cloud-off" class="w-8 h-8 mx-auto mb-2 block text-red-500"></i>
+                            Error de conexión. Verifica que el Google Sheets esté publicado en la Web como CSV.
+                        </div>
+                    `;
+                    lucide.createIcons();
                 }
             });
         }
 
-        // --- MANEJO DE TOASTS (Notificaciones emergentes) ---
+        // --- MANEJO DE TOASTS (Notificaciones) ---
         function showToast(msg, type = 'success') {
             const toast = document.getElementById('toast');
             const toastIconWrapper = document.getElementById('toast-icon-wrapper');
@@ -533,7 +511,6 @@
         }
 
         // --- RENDERIZADO DEL CATÁLOGO DE ACTIVOS ---
-        // Genera visualmente las tarjetas de activos de la columna izquierda que se pueden añadir a la cartera.
         function actualizarCatalogoUI() {
             const catalogo = document.getElementById('catalogoActivos');
             catalogo.innerHTML = '';
@@ -550,7 +527,6 @@
 
             filtrados.forEach(act => {
                 const yaAgregado = portafolioSeleccionado.hasOwnProperty(act.Ticker);
-                const descMoneda = act.Moneda === 'PEN' ? 'Soles (S/.)' : 'Dólares ($)';
                 
                 const div = document.createElement('div');
                 div.className = "flex justify-between items-center bg-slate-950 p-3 rounded-xl border border-slate-900/60 hover:border-slate-800 transition duration-150";
@@ -564,7 +540,7 @@
                     </div>
                     <div class="flex items-center space-x-4">
                         <div class="text-right text-xs">
-                            <span class="text-slate-400 block font-medium">CAGR: <strong class="text-emerald-400 font-bold">${act.Crecimiento.toFixed(2)}%</strong></span>
+                            <span class="text-slate-400 block font-medium">CAGR 10A: <strong class="text-emerald-400 font-bold">${act.Crecimiento.toFixed(2)}%</strong></span>
                         </div>
                         <button onclick="toggleActivo('${act.Ticker}')" class="p-2 rounded-lg transition-all ${
                             yaAgregado 
@@ -581,26 +557,29 @@
             lucide.createIcons();
         }
 
-        // Manejo de la botonera de filtros de categoría
+        // Filtrar activos por categorías
         function filtrarActivos(categoria) {
             activeFilter = categoria;
+            const normalizedID = categoria === '7 MAGNIFICAS' ? '7-MAGNIFICAS' : categoria;
+            
             ['TODOS', 'BVL', '7-MAGNIFICAS', 'ETF'].forEach(cat => {
                 const btn = document.getElementById(`filter-${cat}`);
-                if (cat === categoria || (categoria === '7 MAGNIFICAS' && cat === '7-MAGNIFICAS')) {
-                    btn.className = "py-1.5 px-2 rounded-lg font-semibold transition bg-slate-800 text-white";
-                } else {
-                    btn.className = "py-1.5 px-2 rounded-lg font-semibold transition text-slate-400 hover:text-white";
+                if (btn) {
+                    if (cat === normalizedID) {
+                        btn.className = "py-1.5 px-2 rounded-lg font-semibold transition bg-slate-800 text-white";
+                    } else {
+                        btn.className = "py-1.5 px-2 rounded-lg font-semibold transition text-slate-400 hover:text-white";
+                    }
                 }
             });
             actualizarCatalogoUI();
         }
 
-        // Agrega o remueve un activo de la cartera
+        // Agregar o remover un activo del portafolio del usuario
         function toggleActivo(ticker) {
             if (portafolioSeleccionado.hasOwnProperty(ticker)) {
                 delete portafolioSeleccionado[ticker];
             } else {
-                // Agregar por defecto a un 0% para obligar a balancear o asignar
                 portafolioSeleccionado[ticker] = 0;
             }
             actualizarCatalogoUI();
@@ -608,7 +587,7 @@
             actualizarCalculos();
         }
 
-        // Limpia toda la selección de activos de forma masiva
+        // Limpiar el portafolio
         function vaciarPortafolio() {
             portafolioSeleccionado = {};
             actualizarCatalogoUI();
@@ -618,7 +597,6 @@
         }
 
         // --- RENDERIZADO DE CONTROLES DESLIZANTES ---
-        // Genera los sliders interactivos en base a los activos agregados actualmente.
         function actualizarSlidersUI() {
             const container = document.getElementById('slidersPortafolio');
             const keys = Object.keys(portafolioSeleccionado);
@@ -647,7 +625,7 @@
                     <div class="flex justify-between items-center mb-1">
                         <div class="flex flex-col">
                             <span class="font-bold text-white text-sm">${act.Ticker} (${act.Nombre}) <span class="text-xs text-slate-400 font-normal">(${act.Moneda})</span></span>
-                            <span class="text-[10px] text-slate-500 font-bold">Crecimiento Anual CAGR: ${act.Crecimiento.toFixed(2)}%</span>
+                            <span class="text-[10px] text-slate-500 font-bold">Crecimiento CAGR: ${act.Crecimiento.toFixed(2)}%</span>
                         </div>
                         <div class="flex items-center space-x-3">
                             <span class="font-bold text-emerald-400 text-sm" id="pct-val-${ticker}">${portafolioSeleccionado[ticker]}%</span>
@@ -664,7 +642,7 @@
             lucide.createIcons();
         }
 
-        // Se ejecuta al arrastrar un control deslizante individual
+        // Manejar el deslizamiento de sliders de asignación de peso
         function moverSlider(ticker) {
             const val = parseInt(document.getElementById(`slider-${ticker}`).value);
             portafolioSeleccionado[ticker] = val;
@@ -672,7 +650,7 @@
             actualizarCalculos();
         }
 
-        // Algoritmo matemático para distribuir automáticamente el 100% de la inversión entre los activos agregados
+        // Distribuidor equitativo matemático para normalizar el total a 100%
         function autoBalancear() {
             const keys = Object.keys(portafolioSeleccionado);
             if (keys.length === 0) {
@@ -706,7 +684,7 @@
             showToast("Balanceado automáticamente al 100%.");
         }
 
-        // Configuración de la divisa elegida
+        // Selección de divisas de control
         function setMoneda(simbolo) {
             monedaActual = simbolo;
             document.getElementById('currencySymbol').innerText = simbolo;
@@ -730,14 +708,13 @@
             actualizarCalculos();
         }
 
-        // Formateador de dinero en la moneda principal elegida por el usuario
+        // Formatear monedas para presentación final
         function fMoney(val, customSymbol = null) {
             const sym = customSymbol || monedaActual;
             return `${sym} ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         }
 
-        // --- SISTEMA DE CONVERSIÓN DE DIVISAS ---
-        // Permite convertir de Soles a Dólares o viceversa usando el Tipo de Cambio (TC) actual.
+        // Algoritmo de conversión de divisas usando Tipo de Cambio
         function convertCurrency(amount, fromCur, toCur, tc) {
             if (fromCur === toCur) return amount;
             if (fromCur === 'S/.' && toCur === '$') {
@@ -750,7 +727,6 @@
         }
 
         // --- SISTEMA DE CÁLCULO GENERAL ---
-        // Ejecuta todas las operaciones matemáticas de crecimiento ponderado respetando monedas y TC.
         function actualizarCalculos() {
             const capital = parseFloat(document.getElementById('capitalInput').value) || 0;
             const years = parseInt(document.getElementById('yearsProjection').value) || 10;
@@ -758,7 +734,6 @@
             document.getElementById('yearsLabel').innerText = `${years} ${years === 1 ? 'año' : 'años'}`;
             const keys = Object.keys(portafolioSeleccionado);
             
-            // Medir sumas
             const totalSumaPct = keys.reduce((acc, k) => acc + portafolioSeleccionado[k], 0);
             
             const totalPctLabel = document.getElementById('totalPctLabel');
@@ -778,7 +753,7 @@
                 if (keys.length > 0) alertMessage.classList.remove('hidden');
             }
 
-            // Rendimiento Ponderado
+            // Cálculos Financieros
             let ponderadoCrecimiento = 0;
             let tablaHTML = '';
 
@@ -791,17 +766,14 @@
 
                 ponderadoCrecimiento += act.Crecimiento * (porcentaje / 100);
 
-                // Determinar el símbolo de divisa nativa del activo
                 const assetSymbol = act.Moneda === 'PEN' ? 'S/.' : '$';
 
-                // Calcular la representación nativa si difiere de la moneda del portafolio
                 let visualizacionNativa = '';
                 if (assetSymbol !== monedaActual) {
                     const montoNativo = convertCurrency(invertido, monedaActual, assetSymbol, tc);
                     visualizacionNativa = `<span class="text-[9px] text-slate-400 block font-semibold">(${fMoney(montoNativo, assetSymbol)})</span>`;
                 }
 
-                // Filas dinámicas de cartera
                 if (porcentaje > 0) {
                     tablaHTML += `
                         <div class="flex justify-between items-center bg-slate-950 p-2.5 rounded-xl border border-slate-900">
@@ -826,21 +798,18 @@
                 <div class="text-center py-4 text-slate-500 italic font-medium">Portafolio actualmente vacío.</div>
             `;
 
-            // Actualizar KPIs de Texto
             document.getElementById('resCrecimiento').innerText = `${ponderadoCrecimiento.toFixed(2)}% / año`;
             document.getElementById('montoInversionLabel').innerText = fMoney(capital);
 
-            // Proyección por Crecimiento Compuesto Ponderado (Sin Dividendos)
+            // Crecimiento Compuesto Ponderado (Sin Dividendos)
             const tasaCrecimiento = ponderadoCrecimiento / 100;
             const valorCompuestoFinal = capital * Math.pow(1 + tasaCrecimiento, years);
             document.getElementById('valorProyectado5Anios').innerText = fMoney(valorCompuestoFinal);
 
-            // Refrescar Gráfico
             actualizarGrafico(keys);
         }
 
         // --- SISTEMA DE GRÁFICOS (CHART.JS) ---
-        // Destruye y actualiza el gráfico circular para evitar solapamientos gráficos
         function actualizarGrafico(keys) {
             const labels = [];
             const data = [];
