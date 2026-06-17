@@ -132,19 +132,19 @@
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
 
         <!-- 
-            SUB-BLOQUE 5.1: CONTROL DE CAPITAL Y MONEDA
-            Permite alternar entre Soles y Dólares, definir el capital inicial de 
-            inversión, vaciar la cartera o rebalancear todo de forma matemática.
+            SUB-BLOQUE 5.1: CONTROL DE CAPITAL, MONEDA Y TIPO DE CAMBIO
+            Permite alternar entre Soles y Dólares, definir el capital de inversión, 
+            establecer el Tipo de Cambio en soles y rebalancear la cartera.
         -->
         <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Moneda de Portafolio</label>
                     <div class="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-xl border border-slate-800">
-                        <button id="btnSoles" onclick="setMoneda('S/.')" class="py-2 px-3 rounded-lg text-sm font-medium transition-all bg-emerald-500 text-slate-950 shadow-sm font-bold">
+                        <button id="btnSoles" onclick="setMoneda('S/.')" class="py-2.5 px-3 rounded-lg text-sm font-medium transition-all bg-emerald-500 text-slate-950 shadow-sm font-bold">
                             Soles (S/.)
                         </button>
-                        <button id="btnDolares" onclick="setMoneda('$')" class="py-2 px-3 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white">
+                        <button id="btnDolares" onclick="setMoneda('$')" class="py-2.5 px-3 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white">
                             Dólares ($)
                         </button>
                     </div>
@@ -156,15 +156,25 @@
                             <span class="text-slate-500 font-bold" id="currencySymbol">S/.</span>
                         </div>
                         <input type="number" id="capitalInput" min="100" value="10000" oninput="actualizarCalculos()"
-                            class="block w-full pl-12 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-white font-bold text-lg">
+                            class="block w-full pl-12 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-white font-bold text-lg">
+                    </div>
+                </div>
+                <div>
+                    <label for="tcInput" class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tipo de Cambio (S/. por $)</label>
+                    <div class="relative rounded-xl shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-slate-500 font-bold">S/.</span>
+                        </div>
+                        <input type="number" id="tcInput" min="1" step="0.01" value="3.50" oninput="actualizarCalculos()"
+                            class="block w-full pl-12 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-white font-bold text-lg">
                     </div>
                 </div>
                 <div class="flex gap-2">
-                    <button onclick="autoBalancear()" class="flex-1 py-2.5 px-4 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold rounded-xl text-sm transition flex items-center justify-center space-x-2 border border-slate-700">
+                    <button onclick="autoBalancear()" class="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold rounded-xl text-sm transition flex items-center justify-center space-x-2 border border-slate-700">
                         <i data-lucide="scale" class="w-4 h-4"></i>
                         <span>Auto-balancear</span>
                     </button>
-                    <button onclick="vaciarPortafolio()" class="py-2.5 px-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold rounded-xl text-sm transition border border-red-500/20 active:scale-95" title="Vaciar Portafolio">
+                    <button onclick="vaciarPortafolio()" class="py-3 px-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold rounded-xl text-sm transition border border-red-500/20 active:scale-95" title="Vaciar Portafolio">
                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                     </button>
                 </div>
@@ -340,35 +350,36 @@
         // =========================================================================
         // CONFIGURACIÓN DE TU GOOGLE SHEET (ENLACE CSV PUBLICADO)
         // Reemplaza esta URL de abajo con tu propio enlace de Google Sheets publicado como CSV
-        // Estructura requerida en tu hoja: Ticker, Nombre, Categoria, Crecimiento, Color
+        // Estructura requerida en tu hoja: Ticker, Nombre, Categoria, Crecimiento, Color, Moneda
         // =========================================================================
-        const GOOGLE_SHEETS_CSV_URL = ""; 
+        const GOOGLE_SHEETS_URL = ""; 
 
         // Base de datos local de respaldo con datos de los últimos 10 años (sin dividendos)
+        // Adicionalmente se incluye la propiedad "Moneda" (PEN o USD)
         const defaultAssets = [
             // BVL (Empresas más líquidas / representativas)
-            { Ticker: "BAP", Nombre: "Credicorp", Categoria: "BVL", Crecimiento: 8.50, Color: "#a855f7" },
-            { Ticker: "IFS", Nombre: "Intercorp Financial Services", Categoria: "BVL", Crecimiento: 7.20, Color: "#c084fc" },
-            { Ticker: "FERREYC1", Nombre: "Ferreycorp", Categoria: "BVL", Crecimiento: 6.80, Color: "#d946ef" },
-            { Ticker: "ALICORC1", Nombre: "Alicorp", Categoria: "BVL", Crecimiento: 5.10, Color: "#f472b6" },
-            { Ticker: "SCCO", Nombre: "Southern Copper Corporation", Categoria: "BVL", Crecimiento: 12.40, Color: "#ec4899" },
-            { Ticker: "CVERDEC1", Nombre: "Sociedad Minera Cerro Verde", Categoria: "BVL", Crecimiento: 11.50, Color: "#f43f5e" },
+            { Ticker: "BAP", Nombre: "Credicorp", Categoria: "BVL", Crecimiento: 8.50, Color: "#a855f7", Moneda: "USD" },
+            { Ticker: "IFS", Nombre: "Intercorp Financial Services", Categoria: "BVL", Crecimiento: 7.20, Color: "#c084fc", Moneda: "USD" },
+            { Ticker: "FERREYC1", Nombre: "Ferreycorp", Categoria: "BVL", Crecimiento: 6.80, Color: "#d946ef", Moneda: "PEN" },
+            { Ticker: "ALICORC1", Nombre: "Alicorp", Categoria: "BVL", Crecimiento: 5.10, Color: "#f472b6", Moneda: "PEN" },
+            { Ticker: "SCCO", Nombre: "Southern Copper Corporation", Categoria: "BVL", Crecimiento: 12.40, Color: "#ec4899", Moneda: "USD" },
+            { Ticker: "CVERDEC1", Nombre: "Sociedad Minera Cerro Verde", Categoria: "BVL", Crecimiento: 11.50, Color: "#f43f5e", Moneda: "USD" },
             
             // Las 7 Magníficas
-            { Ticker: "AAPL", Nombre: "Apple Inc.", Categoria: "7 MAGNIFICAS", Crecimiento: 22.40, Color: "#3b82f6" },
-            { Ticker: "MSFT", Nombre: "Microsoft Corporation", Categoria: "7 MAGNIFICAS", Crecimiento: 24.80, Color: "#60a5fa" },
-            { Ticker: "GOOGL", Nombre: "Alphabet (Google)", Categoria: "7 MAGNIFICAS", Crecimiento: 19.50, Color: "#06b6d4" },
-            { Ticker: "AMZN", Nombre: "Amazon.com Inc.", Categoria: "7 MAGNIFICAS", Crecimiento: 18.20, Color: "#22d3ee" },
-            { Ticker: "NVDA", Nombre: "Nvidia Corporation", Categoria: "7 MAGNIFICAS", Crecimiento: 48.50, Color: "#10b981" },
-            { Ticker: "META", Nombre: "Meta Platforms", Categoria: "7 MAGNIFICAS", Crecimiento: 21.10, Color: "#34d399" },
-            { Ticker: "TSLA", Nombre: "Tesla Inc.", Categoria: "7 MAGNIFICAS", Crecimiento: 26.30, Color: "#f59e0b" },
+            { Ticker: "AAPL", Nombre: "Apple Inc.", Categoria: "7 MAGNIFICAS", Crecimiento: 22.40, Color: "#3b82f6", Moneda: "USD" },
+            { Ticker: "MSFT", Nombre: "Microsoft Corporation", Categoria: "7 MAGNIFICAS", Crecimiento: 24.80, Color: "#60a5fa", Moneda: "USD" },
+            { Ticker: "GOOGL", Nombre: "Alphabet (Google)", Categoria: "7 MAGNIFICAS", Crecimiento: 19.50, Color: "#06b6d4", Moneda: "USD" },
+            { Ticker: "AMZN", Nombre: "Amazon.com Inc.", Categoria: "7 MAGNIFICAS", Crecimiento: 18.20, Color: "#22d3ee", Moneda: "USD" },
+            { Ticker: "NVDA", Nombre: "Nvidia Corporation", Categoria: "7 MAGNIFICAS", Crecimiento: 48.50, Color: "#10b981", Moneda: "USD" },
+            { Ticker: "META", Nombre: "Meta Platforms", Categoria: "7 MAGNIFICAS", Crecimiento: 21.10, Color: "#34d399", Moneda: "USD" },
+            { Ticker: "TSLA", Nombre: "Tesla Inc.", Categoria: "7 MAGNIFICAS", Crecimiento: 26.30, Color: "#f59e0b", Moneda: "USD" },
 
             // 5 ETFs Clave
-            { Ticker: "VOO", Nombre: "Vanguard S&P 500 ETF", Categoria: "ETF", Crecimiento: 11.20, Color: "#ef4444" },
-            { Ticker: "QQQ", Nombre: "Invesco Nasdaq 100 ETF", Categoria: "ETF", Crecimiento: 14.80, Color: "#f87171" },
-            { Ticker: "SMH", Nombre: "VanEck Semiconductor ETF", Categoria: "ETF", Crecimiento: 24.60, Color: "#f97316" },
-            { Ticker: "EPU", Nombre: "iShares MSCI Peru ETF", Categoria: "ETF", Crecimiento: 6.90, Color: "#059669" },
-            { Ticker: "VNQ", Nombre: "Vanguard Real Estate ETF", Categoria: "ETF", Crecimiento: 5.50, Color: "#eab308" }
+            { Ticker: "VOO", Nombre: "Vanguard S&P 500 ETF", Categoria: "ETF", Crecimiento: 11.20, Color: "#ef4444", Moneda: "USD" },
+            { Ticker: "QQQ", Nombre: "Invesco Nasdaq 100 ETF", Categoria: "ETF", Crecimiento: 14.80, Color: "#f87171", Moneda: "USD" },
+            { Ticker: "SMH", Nombre: "VanEck Semiconductor ETF", Categoria: "ETF", Crecimiento: 24.60, Color: "#f97316", Moneda: "USD" },
+            { Ticker: "EPU", Nombre: "iShares MSCI Peru ETF", Categoria: "ETF", Crecimiento: 6.90, Color: "#059669", Moneda: "USD" },
+            { Ticker: "VNQ", Nombre: "Vanguard Real Estate ETF", Categoria: "ETF", Crecimiento: 5.50, Color: "#eab308", Moneda: "USD" }
         ];
 
         // --- ESTADO GENERAL ---
@@ -408,8 +419,8 @@
             }
             
             // Cargar datos desde Google Sheets si hay url provista
-            if (GOOGLE_SHEETS_CSV_URL && GOOGLE_SHEETS_CSV_URL.trim() !== "") {
-                cargarDesdeSheets(GOOGLE_SHEETS_CSV_URL);
+            if (GOOGLE_SHEETS_URL && GOOGLE_SHEETS_URL.trim() !== "") {
+                cargarDesdeSheets(GOOGLE_SHEETS_URL);
             } else {
                 actualizarEstadoSync("local");
                 actualizarCatalogoUI();
@@ -457,7 +468,8 @@
                             Nombre: item.Nombre.trim(),
                             Categoria: item.Categoria ? item.Categoria.toUpperCase().trim() : 'TODOS',
                             Crecimiento: parseFloat(item.Crecimiento) || 0,
-                            Color: item.Color ? item.Color.trim() : '#10b981'
+                            Color: item.Color ? item.Color.trim() : '#10b981',
+                            Moneda: item.Moneda ? item.Moneda.toUpperCase().trim() : 'USD'
                         }));
                         actualizarEstadoSync("success");
                         showToast(`¡Conectado a Google Sheets! ${activosCargados.length} activos listos.`);
@@ -533,6 +545,7 @@
 
             filtrados.forEach(act => {
                 const yaAgregado = portafolioSeleccionado.hasOwnProperty(act.Ticker);
+                const descMoneda = act.Moneda === 'PEN' ? 'Soles (S/.)' : 'Dólares ($)';
                 
                 const div = document.createElement('div');
                 div.className = "flex justify-between items-center bg-slate-950 p-3 rounded-xl border border-slate-900/60 hover:border-slate-800 transition duration-150";
@@ -540,7 +553,7 @@
                     <div class="flex items-center space-x-3">
                         <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: ${act.Color}"></span>
                         <div>
-                            <span class="font-bold text-sm text-white">${act.Ticker}</span>
+                            <span class="font-bold text-sm text-white">${act.Ticker} <span class="text-[10px] text-slate-400 font-normal">(${act.Moneda})</span></span>
                             <span class="text-[10px] text-slate-400 block">${act.Nombre}</span>
                         </div>
                     </div>
@@ -628,7 +641,7 @@
                 div.innerHTML = `
                     <div class="flex justify-between items-center mb-1">
                         <div class="flex flex-col">
-                            <span class="font-bold text-white text-sm">${act.Ticker} (${act.Nombre})</span>
+                            <span class="font-bold text-white text-sm">${act.Ticker} (${act.Nombre}) <span class="text-xs text-slate-400 font-normal">(${act.Moneda})</span></span>
                             <span class="text-[10px] text-slate-500 font-bold">Crecimiento Anual CAGR: ${act.Crecimiento.toFixed(2)}%</span>
                         </div>
                         <div class="flex items-center space-x-3">
@@ -697,14 +710,14 @@
             const btnDolares = document.getElementById('btnDolares');
             
             if (simbolo === 'S/.') {
-                btnSoles.className = "py-2 px-3 rounded-lg text-sm font-medium transition-all bg-emerald-500 text-slate-950 shadow-sm font-bold";
-                btnDolares.className = "py-2 px-3 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white";
+                btnSoles.className = "py-2.5 px-3 rounded-lg text-sm font-medium transition-all bg-emerald-500 text-slate-950 shadow-sm font-bold";
+                btnDolares.className = "py-2.5 px-3 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white";
                 if (document.getElementById('capitalInput').value == "3000") {
                     document.getElementById('capitalInput').value = "10000";
                 }
             } else {
-                btnDolares.className = "py-2 px-3 rounded-lg text-sm font-medium transition-all bg-emerald-500 text-slate-950 shadow-sm font-bold";
-                btnSoles.className = "py-2 px-3 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white";
+                btnDolares.className = "py-2.5 px-3 rounded-lg text-sm font-medium transition-all bg-emerald-500 text-slate-950 shadow-sm font-bold";
+                btnSoles.className = "py-2.5 px-3 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white";
                 if (document.getElementById('capitalInput').value == "10000") {
                     document.getElementById('capitalInput').value = "3000";
                 }
@@ -712,16 +725,31 @@
             actualizarCalculos();
         }
 
-        // Formateador de dinero (Ej. de S/. 10000 a S/. 10,000.00)
-        function fMoney(val) {
-            return `${monedaActual} ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        // Formateador de dinero en la moneda principal elegida por el usuario
+        function fMoney(val, customSymbol = null) {
+            const sym = customSymbol || monedaActual;
+            return `${sym} ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        // --- SISTEMA DE CONVERSIÓN DE DIVISAS ---
+        // Permite convertir de Soles a Dólares o viceversa usando el Tipo de Cambio (TC) actual.
+        function convertCurrency(amount, fromCur, toCur, tc) {
+            if (fromCur === toCur) return amount;
+            if (fromCur === 'S/.' && toCur === '$') {
+                return amount / tc;
+            }
+            if (fromCur === '$' && toCur === 'S/.') {
+                return amount * tc;
+            }
+            return amount;
         }
 
         // --- SISTEMA DE CÁLCULO GENERAL ---
-        // Ejecuta todas las operaciones matemáticas de crecimiento ponderado e interés compuesto
+        // Ejecuta todas las operaciones matemáticas de crecimiento ponderado respetando monedas y TC.
         function actualizarCalculos() {
             const capital = parseFloat(document.getElementById('capitalInput').value) || 0;
             const years = parseInt(document.getElementById('yearsProjection').value) || 10;
+            const tc = parseFloat(document.getElementById('tcInput').value) || 3.50;
             document.getElementById('yearsLabel').innerText = `${years} ${years === 1 ? 'año' : 'años'}`;
             const keys = Object.keys(portafolioSeleccionado);
             
@@ -758,18 +786,31 @@
 
                 ponderadoCrecimiento += act.Crecimiento * (porcentaje / 100);
 
+                // Determinar el símbolo de divisa nativa del activo
+                const assetSymbol = act.Moneda === 'PEN' ? 'S/.' : '$';
+
+                // Calcular la representación nativa si difiere de la moneda del portafolio
+                let visualizacionNativa = '';
+                if (assetSymbol !== monedaActual) {
+                    const montoNativo = convertCurrency(invertido, monedaActual, assetSymbol, tc);
+                    visualizacionNativa = `<span class="text-[9px] text-slate-400 block font-semibold">(${fMoney(montoNativo, assetSymbol)})</span>`;
+                }
+
                 // Filas dinámicas de cartera
                 if (porcentaje > 0) {
                     tablaHTML += `
                         <div class="flex justify-between items-center bg-slate-950 p-2.5 rounded-xl border border-slate-900">
                             <div class="flex items-center space-x-2">
                                 <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${act.Color}"></span>
-                                <span class="font-bold text-slate-200">${act.Ticker}</span>
-                                <span class="text-[10px] text-slate-500 font-bold">${porcentaje}%</span>
+                                <div>
+                                    <span class="font-bold text-slate-200 block">${act.Ticker} <span class="text-[9px] text-slate-500 font-normal">(${act.Moneda})</span></span>
+                                    <span class="text-[10px] text-slate-500 font-bold">${porcentaje}%</span>
+                                </div>
                             </div>
                             <div class="text-right">
                                 <span class="font-bold text-slate-100 block">${fMoney(invertido)}</span>
-                                <span class="text-[9px] text-slate-400 font-semibold">10-Yr CAGR: ${act.Crecimiento.toFixed(2)}%</span>
+                                ${visualizacionNativa}
+                                <span class="text-[9px] text-emerald-400 font-semibold block mt-0.5">CAGR: ${act.Crecimiento.toFixed(2)}%</span>
                             </div>
                         </div>
                     `;
