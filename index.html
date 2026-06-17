@@ -4,14 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulador de Portafolio de Crecimiento - Módulo 2</title>
-    <!-- Tailwind CSS -->
+    <!-- 
+        =========================================================================
+        BLOQUE 1: IMPORTACIÓN DE LIBRERÍAS EXTERNAS (CDNs)
+        =========================================================================
+        - Tailwind CSS: Para el diseño responsive y estilos visuales modernos.
+        - Chart.js: Para generar el gráfico de dona interactivo en tiempo real.
+        - Lucide Icons: Iconos vectoriales limpios y minimalistas.
+        - PapaParse: Librería ultrarápida para leer y parsear el archivo CSV de Google Sheets.
+    -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js para gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- PapaParse para procesamiento CSV rápido -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
+    <!-- 
+        =========================================================================
+        BLOQUE 2: ESTILOS PERSONALIZADOS (CSS complementario)
+        =========================================================================
+        Estilos específicos que Tailwind no cubre por defecto, como la personalización 
+        del scroll lateral y la transición de micro-animaciones.
+    -->
     <style>
         ::-webkit-scrollbar {
             width: 8px;
@@ -33,7 +46,13 @@
 </head>
 <body class="min-h-full flex flex-col font-sans bg-slate-950 text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-200 overflow-x-hidden">
 
-    <!-- Modal Disclaimer Pop-up -->
+    <!-- 
+        =========================================================================
+        BLOQUE 3: MODAL DE EXENCIÓN DE RESPONSABILIDAD (Disclaimer Pop-up)
+        =========================================================================
+        Aparece al inicio de la navegación exigiendo al usuario leer y aceptar los 
+        términos de carácter puramente educativo de la simulación.
+    -->
     <div id="disclaimer-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md transition-opacity duration-300">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-6 transform scale-100 transition-transform duration-300">
             <div class="flex items-center space-x-3 text-amber-500">
@@ -45,7 +64,7 @@
             
             <div class="space-y-3 text-sm text-slate-300 leading-relaxed">
                 <p>
-                    Bienvenido a nuestro Simulador de Portafolio. Antes de interactuar con la herramienta, por favor ten en cuenta lo siguiente:
+                    Bienvenido a nuestro Simulador de Portafolio de Crecimiento. Antes de interactuar con la herramienta, por favor ten en cuenta lo siguiente:
                 </p>
                 <p class="font-semibold text-slate-200">
                     ⚠️ Los montos, porcentajes y proyecciones simulados en esta plataforma son aproximaciones matemáticas basadas en datos históricos de rendimiento de los últimos 10 años.
@@ -66,7 +85,13 @@
         </div>
     </div>
 
-    <!-- Navbar -->
+    <!-- 
+        =========================================================================
+        BLOQUE 4: BARRA DE NAVEGACIÓN Y ESTADO DE SINCRONIZACIÓN
+        =========================================================================
+        Muestra el logotipo de la academia y un indicador de conexión que valida en 
+        tiempo real si los datos vienen de Google Sheets o del respaldo local.
+    -->
     <header class="border-b border-slate-800 bg-slate-900/40 backdrop-blur-md sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div class="flex items-center space-x-3">
@@ -91,7 +116,7 @@
         </div>
     </header>
 
-    <!-- Notification Toast -->
+    <!-- TOAST DE NOTIFICACIÓN: Ventana emergente flotante para alertas del sistema -->
     <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-2xl flex items-center space-x-3 max-w-sm">
         <div id="toast-icon-wrapper" class="p-1.5 rounded-lg">
             <i id="toast-icon" class="w-5 h-5"></i>
@@ -99,10 +124,18 @@
         <p id="toast-msg" class="text-xs font-medium text-slate-200"></p>
     </div>
 
-    <!-- Main Content -->
+    <!-- 
+        =========================================================================
+        BLOQUE 5: CONTENEDOR PRINCIPAL
+        =========================================================================
+    -->
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
 
-        <!-- Panel de Entrada de Capital -->
+        <!-- 
+            SUB-BLOQUE 5.1: CONTROL DE CAPITAL Y MONEDA
+            Permite alternar entre Soles y Dólares, definir el capital inicial de 
+            inversión, vaciar la cartera o rebalancear todo de forma matemática.
+        -->
         <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                 <div>
@@ -138,13 +171,17 @@
             </div>
         </div>
 
-        <!-- Layout Principal de Construcción -->
+        <!-- 
+            SUB-BLOQUE 5.2: GRID COMPUESTO DE DOS COLUMNAS
+        -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
-            <!-- Columna Izquierda: Catálogo y Sliders -->
+            <!-- 
+                COLUMNA IZQUIERDA (7/12 cols): Catálogo de selección y controles de asignación (Sliders)
+            -->
             <div class="lg:col-span-7 space-y-6">
                 
-                <!-- Buscador / Catálogo -->
+                <!-- CATÁLOGO DE ACTIVOS DISPONIBLES: Filtros y tarjetas de selección -->
                 <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-bold text-white flex items-center space-x-2">
@@ -153,7 +190,7 @@
                         </h3>
                     </div>
 
-                    <!-- Filtros por Categoría -->
+                    <!-- Botonera de filtros por Categoría de Activo -->
                     <div class="grid grid-cols-4 gap-2 mb-4 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
                         <button onclick="filtrarActivos('TODOS')" id="filter-TODOS" class="py-1.5 px-2 rounded-lg transition bg-slate-800 text-white">Todos</button>
                         <button onclick="filtrarActivos('BVL')" id="filter-BVL" class="py-1.5 px-2 rounded-lg transition text-slate-400 hover:text-white">BVL</button>
@@ -161,13 +198,13 @@
                         <button onclick="filtrarActivos('ETF')" id="filter-ETF" class="py-1.5 px-2 rounded-lg transition text-slate-400 hover:text-white">ETFs</button>
                     </div>
 
-                    <!-- Grid de Selección de Activos -->
-                    <div class="max-h-72 overflow-y-auto pr-2 space-y-2 animate-fadeIn" id="catalogoActivos">
-                        <!-- Generado dinámicamente -->
+                    <!-- Lista dinámica de activos generados mediante JS -->
+                    <div class="max-h-72 overflow-y-auto pr-2 space-y-2" id="catalogoActivos">
+                        <!-- Cargado de forma dinámica -->
                     </div>
                 </div>
 
-                <!-- Sliders de Distribución -->
+                <!-- CONTROLES DESLIZANTES (SLIDERS): Para configurar el peso (%) de cada activo -->
                 <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-bold text-white flex items-center space-x-2">
@@ -178,14 +215,14 @@
                     </div>
 
                     <div id="slidersPortafolio" class="space-y-4">
-                        <!-- Dinámico -->
+                        <!-- El placeholder de aviso se reemplaza al seleccionar activos -->
                         <div class="text-center py-8 text-slate-500 text-sm italic animate-pulse" id="emptySlidersPlaceholder">
                             <i data-lucide="folder-open" class="w-8 h-8 mx-auto mb-2 text-slate-600 block"></i>
                             Selecciona los activos en la lista superior para armar tu estrategia.
                         </div>
                     </div>
 
-                    <!-- Verificación de suma total (100%) -->
+                    <!-- Barra de validación del 100% obligatorio -->
                     <div class="mt-6 pt-4 border-t border-slate-800/60">
                         <div class="flex justify-between text-sm font-semibold mb-2">
                             <span class="text-slate-400">Total Distribuido:</span>
@@ -202,28 +239,30 @@
                 </div>
             </div>
 
-            <!-- Columna Derecha: Análisis Visual y Métricas -->
+            <!-- 
+                COLUMNA DERECHA (5/12 cols): Gráfico de torta, KPI de crecimiento compuesto y tablas resumen
+            -->
             <div class="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
                 
-                <!-- Resultados del Análisis de Crecimiento -->
+                <!-- ANÁLISIS DE CRECIMIENTO: Gráfico interactivo y proyección a futuro -->
                 <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm space-y-4">
                     <h3 class="text-lg font-bold text-white flex items-center space-x-2">
                         <i data-lucide="pie-chart" class="w-5 h-5 text-emerald-400"></i>
                         <span>Análisis de Crecimiento</span>
                     </h3>
 
-                    <!-- Chart JS Doughnut -->
+                    <!-- Lienzo de renderizado para Chart.js -->
                     <div class="relative h-56 w-full flex items-center justify-center p-2 bg-slate-950/40 rounded-xl border border-slate-800/50">
                         <canvas id="portfolioChart"></canvas>
                     </div>
 
-                    <!-- KPI de Crecimiento Promedio Ponderado -->
+                    <!-- KPI: Retorno Promedio Histórico Anualizado Ponderado (CAGR) -->
                     <div class="bg-slate-950 p-4 rounded-xl border border-slate-850">
                         <span class="text-[10px] uppercase tracking-wider text-slate-500 font-bold block mb-1">Crecimiento Promedio Anual Histórico (10 años)</span>
                         <span class="text-2xl font-extrabold text-emerald-400" id="resCrecimiento">0.00% / año</span>
                     </div>
 
-                    <!-- Proyección Compuesta -->
+                    <!-- Proyección de Interés Compuesto configurable mediante slider temporal -->
                     <div class="bg-slate-950 p-4 rounded-xl border border-slate-850 space-y-2">
                         <div class="flex justify-between items-center text-xs">
                             <span class="text-slate-400 font-medium">Inversión Inicial:</span>
@@ -242,17 +281,20 @@
                     </div>
                 </div>
 
-                <!-- Tabla Resumen Dinámica -->
+                <!-- TABLA DE DETALLE DE LA CARTERA: Muestra cuánto dinero va destinado a cada activo en cartera -->
                 <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-sm">
                     <h4 class="text-sm font-bold text-white mb-3">Resumen de Activos Seleccionados</h4>
                     <div class="space-y-2 text-xs" id="tablaActivosActivos">
-                        <!-- Dinámico -->
+                        <!-- Las filas dinámicas se insertarán aquí desde JavaScript -->
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Banner de Conversión a WhatsApp -->
+        <!-- 
+            SUB-BLOQUE 5.3: BANNER DE CONVERSIÓN (CALL TO ACTION DE WHATSAPP)
+            Llamado a la acción llamativo para guiar al usuario hacia tu comunidad.
+        -->
         <div class="bg-gradient-to-r from-emerald-900/40 via-teal-900/30 to-slate-950/40 border border-emerald-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
             <div class="absolute -right-16 -bottom-16 w-48 h-48 bg-emerald-500/10 rounded-full blur-2xl"></div>
             <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -277,7 +319,11 @@
 
     </main>
 
-    <!-- Footer -->
+    <!-- 
+        =========================================================================
+        BLOQUE 6: PIE DE PÁGINA (Footer)
+        =========================================================================
+    -->
     <footer class="border-t border-slate-900 bg-slate-950 py-6 text-center text-xs text-slate-500">
         <div class="max-w-7xl mx-auto px-4">
             <p>Simulador de Portafolio Avanzado - Hecho con fines educativos.</p>
@@ -285,6 +331,11 @@
         </div>
     </footer>
 
+    <!-- 
+        =========================================================================
+        BLOQUE 7: LÓGICA DE CONTROL (Script de JavaScript)
+        =========================================================================
+    -->
     <script>
         // =========================================================================
         // CONFIGURACIÓN DE TU GOOGLE SHEET (ENLACE CSV PUBLICADO)
@@ -321,6 +372,7 @@
         ];
 
         // --- ESTADO GENERAL ---
+        // Variables internas de memoria para registrar qué está haciendo el usuario en pantalla.
         let activosCargados = [...defaultAssets];
         let portafolioSeleccionado = {
             "VOO": 25,
@@ -333,6 +385,7 @@
         let activeFilter = 'TODOS';
 
         // --- MANEJO DEL DISCLAIMER ---
+        // Se ejecuta al dar clic en aceptar el disclaimer inicial para remover el modal.
         function acceptDisclaimer() {
             const modal = document.getElementById('disclaimer-modal');
             modal.classList.add('opacity-0');
@@ -344,7 +397,9 @@
         }
 
         // --- INICIALIZACIÓN ---
+        // Se activa apenas se abre la página web en el navegador del usuario.
         window.onload = function() {
+            // Renderiza los iconos de la librería Lucide
             lucide.createIcons();
 
             // Verificar si ya se aceptó el disclaimer en esta sesión
@@ -380,7 +435,8 @@
             }
         }
 
-        // --- STREAMING_CHUNK: Procesando carga remota desde Google Sheets... ---
+        // --- CONECTIVIDAD GOOGLE SHEETS VIA PAPAPARSE ---
+        // Realiza una petición asíncrona a la URL provista, procesa el CSV y actualiza la lista.
         function cargarDesdeSheets(url) {
             Papa.parse(url, {
                 download: true,
@@ -395,6 +451,7 @@
                         actualizarEstadoSync("error");
                         activosCargados = [...defaultAssets];
                     } else {
+                        // Mapeo estructurado para evitar que errores tipográficos en el excel rompan el JS
                         activosCargados = data.map(item => ({
                             Ticker: item.Ticker.trim(),
                             Nombre: item.Nombre.trim(),
@@ -430,7 +487,7 @@
             });
         }
 
-        // --- STREAMING_CHUNK: Sistema de Notificaciones Toast... ---
+        // --- MANEJO DE TOASTS (Notificaciones emergentes) ---
         function showToast(msg, type = 'success') {
             const toast = document.getElementById('toast');
             const toastIconWrapper = document.getElementById('toast-icon-wrapper');
@@ -458,7 +515,8 @@
             }, 3000);
         }
 
-        // --- STREAMING_CHUNK: Creando catálogo visual de activos... ---
+        // --- RENDERIZADO DEL CATÁLOGO DE ACTIVOS ---
+        // Genera visualmente las tarjetas de activos de la columna izquierda que se pueden añadir a la cartera.
         function actualizarCatalogoUI() {
             const catalogo = document.getElementById('catalogoActivos');
             catalogo.innerHTML = '';
@@ -505,7 +563,7 @@
             lucide.createIcons();
         }
 
-        // Alternar categorías de filtro
+        // Manejo de la botonera de filtros de categoría
         function filtrarActivos(categoria) {
             activeFilter = categoria;
             ['TODOS', 'BVL', '7-MAGNIFICAS', 'ETF'].forEach(cat => {
@@ -519,7 +577,7 @@
             actualizarCatalogoUI();
         }
 
-        // Añadir/Remover de cartera
+        // Agrega o remueve un activo de la cartera
         function toggleActivo(ticker) {
             if (portafolioSeleccionado.hasOwnProperty(ticker)) {
                 delete portafolioSeleccionado[ticker];
@@ -532,7 +590,7 @@
             actualizarCalculos();
         }
 
-        // Vaciar la cartera completa
+        // Limpia toda la selección de activos de forma masiva
         function vaciarPortafolio() {
             portafolioSeleccionado = {};
             actualizarCatalogoUI();
@@ -541,7 +599,8 @@
             showToast("Portafolio vaciado completamente.");
         }
 
-        // --- STREAMING_CHUNK: Creando sliders de distribución interactivos... ---
+        // --- RENDERIZADO DE CONTROLES DESLIZANTES ---
+        // Genera los sliders interactivos en base a los activos agregados actualmente.
         function actualizarSlidersUI() {
             const container = document.getElementById('slidersPortafolio');
             const keys = Object.keys(portafolioSeleccionado);
@@ -587,7 +646,7 @@
             lucide.createIcons();
         }
 
-        // Manejar deslizamiento
+        // Se ejecuta al arrastrar un control deslizante individual
         function moverSlider(ticker) {
             const val = parseInt(document.getElementById(`slider-${ticker}`).value);
             portafolioSeleccionado[ticker] = val;
@@ -595,7 +654,7 @@
             actualizarCalculos();
         }
 
-        // Normalización inteligente al 100%
+        // Algoritmo matemático para distribuir automáticamente el 100% de la inversión entre los activos agregados
         function autoBalancear() {
             const keys = Object.keys(portafolioSeleccionado);
             if (keys.length === 0) {
@@ -629,7 +688,7 @@
             showToast("Balanceado automáticamente al 100%.");
         }
 
-        // Configuración de moneda
+        // Configuración de la divisa elegida
         function setMoneda(simbolo) {
             monedaActual = simbolo;
             document.getElementById('currencySymbol').innerText = simbolo;
@@ -653,12 +712,13 @@
             actualizarCalculos();
         }
 
-        // Formato numérico financiero
+        // Formateador de dinero (Ej. de S/. 10000 a S/. 10,000.00)
         function fMoney(val) {
             return `${monedaActual} ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         }
 
-        // --- STREAMING_CHUNK: Calculando crecimiento de capital ponderado... ---
+        // --- SISTEMA DE CÁLCULO GENERAL ---
+        // Ejecuta todas las operaciones matemáticas de crecimiento ponderado e interés compuesto
         function actualizarCalculos() {
             const capital = parseFloat(document.getElementById('capitalInput').value) || 0;
             const years = parseInt(document.getElementById('yearsProjection').value) || 10;
@@ -733,7 +793,8 @@
             actualizarGrafico(keys);
         }
 
-        // --- STREAMING_CHUNK: Renderizando distribución con Chart.js... ---
+        // --- SISTEMA DE GRÁFICOS (CHART.JS) ---
+        // Destruye y actualiza el gráfico circular para evitar solapamientos gráficos
         function actualizarGrafico(keys) {
             const labels = [];
             const data = [];
